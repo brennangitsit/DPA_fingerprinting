@@ -1,8 +1,7 @@
 % Code to inspect the content of sub_tmaps.mat
-function inspect_sub_tmaps()
+function DPA_inspect_sub_tmaps(filepath)
     % Load the file
-    load('/Users/bterhunecotter/MyDrive/SDSU_LLCN/NEURO/Repositories/DPA_fingerprinting/sub_tmaps.mat');
-    
+    load(filepath)
     % Get variable names in the file
     var_names = who;
     disp('Variables in sub_tmaps.mat:');
