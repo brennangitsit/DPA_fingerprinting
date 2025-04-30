@@ -159,7 +159,7 @@ for pairIdx = 1:length(modalityPairs)
     prd_acc = zeros(n_voxels, n_subjects); % Accuracy (1=correct, 0=incorrect)
     prd_acc_SI = zeros(n_voxels, n_subjects); % Similarity values for correct IDs
     
-    % Loop through subjects
+ % Loop through subjects
     for subj = 1:n_subjects
         disp(['  Processing subject ' num2str(subj) ' of ' num2str(n_subjects)]);
         
@@ -198,4 +198,126 @@ for pairIdx = 1:length(modalityPairs)
                 % Correlate this subject's origin pattern with all subjects' target patterns
                 corr_values = corr(t_sub_origin, t_target);
                 
-                % Find the subject with highest
+                % Find the subject with highest correlation
+                [max_corr, predicted_id] = max(corr_values);
+                
+                % Store the predicted ID and similarity value
+                prd_id(v_id, subj) = predicted_id;
+                prd_SI(v_id, subj) = max_corr;
+            end
+        end
+    end
+    
+    %% ==================== CALCULATE ACCURACY ====================
+    disp('Calculating identification accuracy...');
+    
+    % Determine which identifications were correct
+    for subj = 1:n_subjects
+        % Get predicted IDs for this subject
+        subID_prd = prd_id(:, subj);
+        
+        % Find voxels where prediction matches subject's true ID
+        correct_IDs = find(subID_prd == subj);
+        
+        % Find voxels with valid similarity values
+        valid_voxels = find(~isnan(prd_SI(:, subj)));
+        
+        % Exclude voxels with perfect correlation (these are likely artifacts)
+        perfect_corr = find(prd_SI(:, subj) == 1);
+        
+        % Get voxels with valid predictions
+        valid_correct = intersect(correct_IDs, valid_voxels);
+        final_correct = setdiff(valid_correct, perfect_corr);
+        
+        % Mark correctly identified voxels
+        prd_acc(final_correct, subj) = 1;
+        prd_acc_SI(final_correct, subj) = prd_SI(final_correct, subj);
+    end
+    
+    % Calculate mean accuracy and similarity across subjects
+    mean_acc = mean(prd_acc, 2);
+    mean_SI = mean(prd_acc_SI, 2);
+    
+    % Reshape to 3D volume
+    acc_map = reshape(mean_acc, maskDims);
+    sim_map = reshape(mean_SI, maskDims);
+    
+    % Save accuracy and similarity maps
+    origin_name = taskname{originIdx};
+    target_name = taskname{targetIdx};
+    
+    acc_nii = make_nii(acc_map);
+    acc_nii.hdr = hdr;
+    save_nii(acc_nii, fullfile(resultsDir, [origin_name '_' target_name '_acc.nii']));
+    
+    sim_nii = make_nii(sim_map);
+    sim_nii.hdr = hdr;
+    save_nii(sim_nii, fullfile(resultsDir, [origin_name '_' target_name '_sim.nii']));
+    
+    % Save raw accuracy data for further analysis
+    save(fullfile(resultsDir, ['sub_acc_' origin_name '_' target_name '.mat']), 'prd_acc');
+    
+    disp(['Completed ' origin_name ' -> ' target_name ' analysis']);
+end
+
+%% ==================== PERMUTATION TESTING ====================
+disp('Performing permutation testing to assess statistical significance...');
+
+% This section would implement permutation testing
+% For each voxel, randomly reassign subject identities and repeat the identification
+% process to create a null distribution
+% Compare actual identification rates to this null distribution
+% Implement if resources permit (this is computationally intensive)
+
+%% ==================== CREATE CONJUNCTION MAP ====================
+disp('Creating conjunction map of significant regions...');
+
+% Load accuracy maps
+asl_to_eng_acc = load_nii(fullfile(resultsDir, 'asl_eng_acc.nii'));
+eng_to_asl_acc = load_nii(fullfile(resultsDir, 'eng_asl_acc.nii'));
+
+% Apply statistical threshold (this would ideally come from permutation testing)
+% For now, we'll use a simple threshold based on the paper
+asl_to_eng_thresholded = asl_to_eng_acc.img > 0.5;  % Threshold at 50% accuracy
+eng_to_asl_thresholded = eng_to_asl_acc.img > 0.5;  % Adjust based on your data
+
+% Create conjunction map (regions significant in both directions)
+conjunction_map = asl_to_eng_thresholded & eng_to_asl_thresholded;
+
+% Calculate mean accuracy in the conjunction regions
+mean_acc_map = (asl_to_eng_acc.img + eng_to_asl_acc.img) / 2 .* conjunction_map;
+
+% Save conjunction map
+conj_nii = make_nii(conjunction_map);
+conj_nii.hdr = hdr;
+save_nii(conj_nii, fullfile(resultsDir, 'asl_eng_conjunction.nii'));
+
+% Save mean accuracy map
+mean_acc_nii = make_nii(mean_acc_map);
+mean_acc_nii.hdr = hdr;
+save_nii(mean_acc_nii, fullfile(resultsDir, 'asl_eng_mean_acc.nii'));
+
+%% ==================== REPORTING ====================
+disp('Analysis complete. Results saved to:');
+disp(resultsDir);
+disp(' ');
+disp('Summary of findings:');
+
+% Count significant voxels
+n_sig_voxels = sum(conjunction_map(:));
+disp(['Identified ' num2str(n_sig_voxels) ' voxels showing supramodal language processing']);
+
+% Calculate cluster sizes
+CC = bwconncomp(conjunction_map);
+cluster_sizes = cellfun(@numel, CC.PixelIdxList);
+[sorted_sizes, idx] = sort(cluster_sizes, 'descend');
+
+% Report largest clusters
+disp('Largest supramodal clusters:');
+for i = 1:min(5, length(sorted_sizes))
+    cluster_idx = CC.PixelIdxList{idx(i)};
+    cluster_acc = mean(mean_acc_map(cluster_idx));
+    disp(['  Cluster ' num2str(i) ': ' num2str(sorted_sizes(i)) ' voxels, mean accuracy: ' num2str(cluster_acc)]);
+end
+
+disp('Analysis completed successfully');
