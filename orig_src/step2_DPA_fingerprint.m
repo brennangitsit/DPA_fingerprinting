@@ -1,30 +1,31 @@
 
-% this codes is used to identify individual subject across task conditions
-% based on their brain activity patterns. 
-% For each pairs of tasks,  an .nii map is produced showing for each voxel the group-mean accuracy of invidual
-% identfication 
+% this script is used to identify individual subject across task conditions based on their brain activity patterns. 
+% For each pair of tasks, an .nii map is produced showing for each voxel the group-mean accuracy of invidual identification. 
 clear;
 close all;
-workpath='D:\research\我的代码库\fingerprint\RSA_fingerprint_tutorial\';
-cd (workpath); 
-addpath(genpath([workpath, 'toolbox\NIFTI_toolbox\'])); 
+
+projpath="/Volumes/BTCruiser/GRFP";
+cd (projpath); 
 dest='.\results\';
-mask=load_nii('D:\research\toolbox\mask\brainmask_3mm.nii');
-hdr=mask.hdr; % the hdr is used to convert img matrix into nii map.
+
+addpath(genpath("/Users/bterhunecotter/MyDrive/SDSU_LLCN/NEURO/Repositories/NIFTI_toolbox")); 
+mask=load_nii("PATHTOMASKHERE");
+hdr=mask.hdr; % the hdr is used to convert an img matrix into a nii map.
 clear mask  
 
-% the sub_tmpas contain a set of a 4-D matrix, one matrix for each task (condition). the first three dimentions of the matrix correspond to the t-map from the first-level analysis. 
-% the four dimention correspond to subject ID . 
-load('.\data\sub_tmaps.mat'); % T maps seem work better than Beta maps. 
+% the sub-tmaps contain a set of 4D matrices - one matrix for each task (condition). 
+% the first three dimensions of the matrix correspond to the t-map from the first-level analysis. 
+% the fourth dimension corresponds to subject ID. 
+load('.\data\sub_tmaps.mat'); % T maps seem to work better than beta maps. 
 
- % this searchlight_list file contains the searchlights over the whole brain . 
-% Note the  spatiatial dimention of the brain mask used to make the searchlights  must be identical to the t-maps (her is 61*73*61)
+% this searchlight_list file contains the searchlights over the whole brain . 
+% the spatial dimensions of the brain mask used to make the searchlights must be identical to the t-maps
 load ('.\script\searchlight_list.mat');
 ID_set=L.LI;
 voxel=L.voxel;
 sub_N=size(sign,4);
-source={txt,spoken,sign};
-taskname={'txt','spoken','sign'};
+source={asl, eng};
+taskname={'asl', 'eng'};
 
 for  row=1:3
     tic
@@ -35,7 +36,7 @@ for  row=1:3
               predictor=source{cl};            
               p_name=taskname{cl};
               
-%% predict subject identitity across runs
+%% predict subject identity across runs
               prd_id=nan(61*73*61,sub_N);
               prd_SI=nan(61*73*61,sub_N);
               for   i=1:sub_N
@@ -58,7 +59,7 @@ for  row=1:3
                          
  %get the predicted subject id (the subject with highest RS with the origin subjects)   
  
-%                         t_sub_origin(t_sub_origin<0)=0;   % using only voxels with postive activities
+%                         t_sub_origin(t_sub_origin<0)=0;   % using only voxels with positive activities
 %                         t_predictor(t_predictor<0)=0;
                         if ~all(t_sub_origin == 0)
                              qq=corr(t_sub_origin,t_predictor);

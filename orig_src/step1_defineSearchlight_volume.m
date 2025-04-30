@@ -1,6 +1,6 @@
 function L = step1_defineSearchlight_volume(ROIMask,Mask)
 % step1_defineSearchlight_volume_llf('mask_spm_2level.nii','mask_spm_2level.nii')
-% 调用SPM 和rastoolbox 工具包代码
+% SPM - RSA toolbox
 % Defines a volumetric searchlight using all voxels that are > 0 in both 
 % ROIMask and the Mask as centres for the searchlights and as potential voxels 
 % to be included in the searchlight. 
@@ -30,7 +30,7 @@ function L = step1_defineSearchlight_volume(ROIMask,Mask)
 %
 %
 % 2/2015 - Joern Diedrichsen & Naveed Ejaz 
-%modified by LLF,2018.08.12
+% modified by LLF,2018.08.12
 
 
 %% 2. Getting sphere definition, and setting up reference mask

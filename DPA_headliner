@@ -1,0 +1,37 @@
+%% STEP 0: Analysis paths, directories, and settings
+workpath = '/Volumes/BTCruiser/GRFP/data/stats/0fwhm/';
+cd(workpath);
+
+addpath(genpath([workpath, 'toolbox/NIFTI_toolbox/'])); 
+results_dir = [workpath, 'results/'];
+if ~exist(results_dir, 'dir')
+    mkdir(results_dir);
+end
+
+%% STEP 1: Define searchlight
+mask_file = 'BRAINMASKFILE.nii'; % Use your brain mask
+L = DPA_define_searchlight_volume(mask_file, mask_file);
+% This will save searchlight_list.mat
+
+%% STEP 2: Prepare MATLAB struct of t-maps
+asl_data = nan(53, 65, 56, n_subjects); % Adjust dimensions to match your data
+eng_data = nan(53, 65, 56, n_subjects);
+
+% Loop through subjects to load their data
+for sub = 1:n_subjects
+    % Load ASL sentence > pseudosign contrast: contrast 14 in current iteration of first-level analysis
+    asl_file = sprintf('sub-%02d/spmT_0014.nii', sub);
+    temp = load_nii(asl_file);
+    asl_data(:,:,:,sub) = temp.img;
+    
+    % Load English sentence > pseudoword contrast: contrast 18 in current iteration of first-level analysis
+    eng_file = sprintf(''sub-%02d/spmT_0018.nii', sub);
+    temp = load_nii(eng_file);
+    eng_data(:,:,:,sub) = temp.img;
+end
+
+% Save these matrices for future use
+save('data/asl_eng_sent-pseudo_tmaps.mat', 'asl_data', 'eng_data');
+
+%% STEP 3: Run the DPA fingerprint analysis
+asl_data = load('data/asl_eng_sent-pseudo_tmaps.mat');
