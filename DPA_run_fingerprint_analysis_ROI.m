@@ -20,6 +20,9 @@ for r = 1:n_rois
     roi_voxel_indices{r} = find(roiMap == roiLabels(r));
 end
 
+% Store results for all pairs
+all_results = struct();
+
 % Loop over modality pairs
 for pairIdx = 1:length(modalityPairs)
     originModality = modalityPairs{pairIdx}{1};
@@ -80,6 +83,35 @@ for pairIdx = 1:length(modalityPairs)
 
     save(fullfile(resultsDir, ['sub_acc_' originModality '_' targetModality '_ROIs.mat']), 'prd_acc');
 
+    all_results.(originModality).(targetModality) = output;
     fprintf('Finished: %s -> %s\n', originModality, targetModality);
+end
+
+%% ==================== CONJUNCTION AND REPORT ====================
+if isfield(all_results, 'asl') && isfield(all_results.asl, 'eng') && ...
+   isfield(all_results, 'eng') && isfield(all_results.eng, 'asl')
+
+    disp('Creating conjunction report across directions...');
+    asl2eng = all_results.asl.eng;
+    eng2asl = all_results.eng.asl;
+
+    assert(isequal(asl2eng.ROI, eng2asl.ROI), 'ROI mismatch between directions');
+
+    conj_mask = (asl2eng.Accuracy > 0.5) & (eng2asl.Accuracy > 0.5);
+    mean_acc = (asl2eng.Accuracy + eng2asl.Accuracy) / 2;
+
+    conjunction_table = table(asl2eng.ROI, conj_mask, mean_acc, ...
+        'VariableNames', {'ROI', 'IsSupramodal', 'MeanAccuracy'});
+
+    writetable(conjunction_table, fullfile(resultsDir, 'ROI_conjunction_summary.csv'));
+
+    n_supramodal = sum(conj_mask);
+    disp(['Identified ' num2str(n_supramodal) ' supramodal ROIs.']);
+    disp('Top supramodal regions:');
+    [sorted_acc, sort_idx] = sort(mean_acc(conj_mask), 'descend');
+    top_rois = asl2eng.ROI(conj_mask);
+    for i = 1:min(5, length(sorted_acc))
+        fprintf('  ROI %d: Mean Accuracy = %.3f\n', top_rois(sort_idx(i)), sorted_acc(i));
+    end
 end
 end

@@ -14,7 +14,7 @@ close all;
 % Path configuration 
 projPath = "/Users/bterhunecotter/_GRFP_data_local"; % Base project directory
 dataPath = fullfile(projPath, 'stats/0fwhm');
-resultsDir = fullfile(projPath, 'results');
+resultsDir = fullfile(projPath, 'results/dpa');
 toolboxPath = "/Users/bterhunecotter/_Repositories/NIFTI_toolbox";
 
 % Create results directory if it doesn't exist
@@ -130,10 +130,10 @@ voxel = L.voxel;
 % Save searchlight list for future use
 save(fullfile(projPath, 'results', 'searchlight_list.mat'), 'L');
 
-%% ==================== FINGERPRINTING ANALYSIS ====================
-disp('Starting DPA fingerprinting analysis...');
+%% ==================== SEARCHLIGHT ANALYSIS ====================
+disp('Starting DPA searchlight analysis...');
 
-DPA_run_fingerprint_analysis( ...
+DPA_run_fingerprint_analysis_SL( ...
     resultsDir, ...
     fullfile(resultsDir, 'common_analysis_mask.nii'), ...
     fullfile(resultsDir, 'searchlight_list.mat'), ...
@@ -214,3 +214,19 @@ for i = 1:n_clusters_to_show
 end
 
 disp('===================================================');
+
+%% ==================== ROI ANALYSIS ===========================
+disp('Starting DPA ROI analysis...');
+
+roiDir = "/Users/bterhunecotter/_NEURO/ROIs";
+roiMapPath = fullfile(roiDir, 'parcelsASL_homologous_r53x65x56.nii');
+
+DPA_run_fingerprint_analysis_ROI( ...
+    resultsDir, ...
+    roiMapPath, ... % ROI image
+    fullfile(resultsDir, 'asl_eng_sent-pseudo_tmaps.mat'), ...
+    {'asl', 'eng'}, ...
+    modalityPairs ...
+);
+
+disp('ROI analysis complete.');
